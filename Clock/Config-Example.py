@@ -42,6 +42,7 @@ digitalsize = 200
 metric = 0  # 0 = English, 1 = Metric
 radar_refresh = 10      # minutes
 weather_refresh = 30    # minutes
+traffic_refresh = 3    # minutes
 # Wind in degrees instead of cardinal 0 = cardinal, 1 = degrees
 wind_degrees = 0
 # Depreciated: use 'satellite' key in radar section, on a per radar basis
@@ -146,4 +147,17 @@ radar4 = {
             'size': 'small',
         },
     )
+}
+
+traffic = {
+    'center': primary_location,
+    'zoom': 11,
+    'satellite': 0,
+    'markers': (
+        {
+            'location': primary_location,
+            'color': 'red',
+            'size': 'small',
+        },
+        )
 }

@@ -17,8 +17,12 @@ import logging.handlers
 from PyQt5 import QtGui, QtNetwork, QtWidgets
 from PyQt5.QtGui import QPixmap, QMovie, QBrush, QColor, QPainter
 from PyQt5.QtCore import Qt, QUrl, QTimer, QSize, QRect, QBuffer, QIODevice, QByteArray
-from PyQt5.QtNetwork import QNetworkRequest, QNetworkReply
+from PyQt5.QtNetwork import QNetworkRequest, QNetworkReply, QNetworkProxy
 from subprocess import Popen
+
+from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
+from PyQt5.QtCore import QEventLoop,QUrl
+
 
 sys.dont_write_bytecode = True
 from GoogleMercatorProjection import getCorners             # NOQA
@@ -311,6 +315,7 @@ def qtstart():
     global objradar2
     global objradar3
     global objradar4
+    global objtraffic
 
     getallwx()
 
@@ -322,6 +327,7 @@ def qtstart():
     objradar2.wxstart()
     objradar3.start(Config.radar_refresh * 60)
     objradar4.start(Config.radar_refresh * 60)
+    objtraffic.start(Config.traffic_refresh * 60)
 
     ctimer = QTimer()
     ctimer.timeout.connect(tick)
@@ -627,19 +633,79 @@ class Radar(QtWidgets.QLabel):
         except Exception:
             pass
 
+class Traffic(QWebEngineView):
+
+    def __init__(self, parent, radar, rect, myname):
+        global xscale, yscale
+        self.myname = myname
+        self.rect = rect
+        self.satellite = Config.satellite
+        try:
+            if radar["satellite"]:
+                self.satellite = 1
+        except KeyError:
+            pass
+        self.baseurl = self.trafficurl(radar, rect, False)
+        logging.info("google traffic map base url: " + self.baseurl)
+        super().__init__(parent)
+
+        self.interval = Config.traffic_refresh * 60
+
+        self.lastwx = 0
+        self.retries = 0
+
+        self.setObjectName(self.myname)
+        self.setGeometry(rect)
+        self.setStyleSheet("#radar { background-color: grey; }")
+
+        self.page = self.page()
+
+    def trafficurl(self, radar, rect, markersonly):
+        urlp = []
+        urlp.append( (str(radar['center'].lat) + ',' + str(radar['center'].lng) + ','))
+        zoom = radar['zoom']
+        urlp.append( str(zoom) + 'z' + '/data=!5')
+        urlp.append('m')
+        urlp.append('1!1e1')
+        return 'https://www.google.com/maps/@' + ''.join(urlp)
+
+    def gettraffic(self):
+        logging.info("get traffic api call" )
+        self.page.triggerAction(QWebEnginePage.Reload)
+
+    def getbase(self):
+        # Apparently QnetworkReply and QwebEngineView are incompatible
+        logging.info("getbase for " + self.myname)
+        self.page.load(QUrl(self.baseurl))
+
+    def start(self, interval=0):
+        if interval > 0:
+            self.interval = interval
+        self.getbase()
+        self.timer = QTimer()
+        self.timer.start(self.interval * 1000)
+        self.timer.timeout.connect(self.gettraffic)
+
+    def stop(self):
+        try:
+            self.timer.stop()
+            self.timer = None
+        except Exception:
+            pass
 
 def realquit():
     w.close()
 
 
 def myquit(a=0, b=0):
-    global objradar1, objradar2, objradar3, objradar4
+    global objradar1, objradar2, objradar3, objradar4, objtraffic
     global ctimer, wtimer, temptimer
 
     objradar1.stop()
     objradar2.stop()
     objradar3.stop()
     objradar4.stop()
+    objtraffic.stop()
     ctimer.stop()
     wxtimer.stop()
     temptimer.stop()
@@ -833,7 +899,7 @@ if __name__ == '__main__':
         yscale = float(height) / 900.0
 
         frames = []
-        framep = 0
+        framep = 2
 
         frame1 = QtWidgets.QFrame(w)
         frame1.setObjectName("frame1")
@@ -841,6 +907,7 @@ if __name__ == '__main__':
         frame1.setStyleSheet(
             "#frame1 { background-color: black; border-image: url(" +
             Config.background + ") 0 0 0 0 stretch stretch;}")
+        frame1.setVisible(False)
         frames.append(frame1)
 
         frame2 = QtWidgets.QFrame(w)
@@ -852,13 +919,14 @@ if __name__ == '__main__':
         frame2.setVisible(False)
         frames.append(frame2)
 
-        # frame3 = QtWidgets.QFrame(w)
-        # frame3.setObjectName("frame3")
-        # frame3.setGeometry(0,0,width,height)
-        # frame3.setStyleSheet("#frame3 { background-color: blue; border-image:
-        #       url("+Config.background+") 0 0 0 0 stretch stretch;}")
-        # frame3.setVisible(False)
-        # frames.append(frame3)
+        frame3 = QtWidgets.QFrame(w)
+        frame3.setObjectName("frame3")
+        frame3.setGeometry(0,0,width,height)
+        frame3.setStyleSheet(
+            "#frame3 { background-color: blue; border-image: url(" +
+            Config.background + ") 0 0 0 0 stretch stretch;}")
+        #frame3.setVisible(False)
+        frames.append(frame3)
 
         squares1 = QtWidgets.QFrame(frame1)
         squares1.setObjectName("squares1")
@@ -903,6 +971,11 @@ if __name__ == '__main__':
         radar4rect = QRect(726 * xscale, 50 * yscale,
                            700 * xscale, 700 * yscale)
         objradar4 = Radar(frame2, Config.radar4, radar4rect, "radar4")
+
+        trafficrect = QRect(13 * xscale, 50 * yscale,
+                           1400 * xscale, 800 * yscale)
+        objtraffic = Traffic(frame3, Config.traffic, trafficrect, "traffic")
+
 
         datex = QtWidgets.QLabel(frame1)
         datex.setObjectName("datex")
@@ -1116,6 +1189,10 @@ if __name__ == '__main__':
 
         manager = QtNetwork.QNetworkAccessManager()
 
+        proxy = QNetworkProxy()
+        proxy.setType(QNetworkProxy.NoProxy)
+        QNetworkProxy.setApplicationProxy(proxy)
+
         # proxy = QNetworkProxy()
         # proxy.setType(QNetworkProxy.HttpProxy)
         # proxy.setHostName("localhost")
@@ -1128,6 +1205,7 @@ if __name__ == '__main__':
         # logging.info(radarurl(Config.radar1,radar1rect))
 
         w.show()
+        #w.windowHandle().setScreen(app.screens()[2])
         w.showFullScreen()
 
         sys.exit(app.exec_())
