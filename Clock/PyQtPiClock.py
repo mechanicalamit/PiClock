@@ -309,7 +309,7 @@ def getallwx():
 
 
 def qtstart():
-    global ctimer, wxtimer, temptimer
+    global ctimer, wxtimer, temptimer, frametimer
     global manager
     global objradar1
     global objradar2
@@ -341,6 +341,11 @@ def qtstart():
     temptimer = QTimer()
     temptimer.timeout.connect(gettemp)
     temptimer.start(1000 * 10 * 60 + random.uniform(1000, 10000))
+
+    frametimer = QTimer()
+    frametimer.timeout.connect(nextframe)
+    frametimer.timeout.connect(resetframetimer)
+    frametimer.start(10000)
 
 
 class Radar(QtWidgets.QLabel):
@@ -725,7 +730,7 @@ def fixupframe(frame, onoff):
                 child.wxstop()
 
 
-def nextframe(plusminus):
+def nextframe(plusminus=1):
     global frames, framep
     frames[framep].setVisible(False)
     fixupframe(frames[framep], False)
@@ -737,6 +742,12 @@ def nextframe(plusminus):
     frames[framep].setVisible(True)
     fixupframe(frames[framep], True)
 
+"""
+ When a mouse/key event occurs, frametimer is set to 20 seconds
+ Post 20 secons timeout, frametimer is reset to 10 seconds here
+"""
+def resetframetimer():
+    frametimer.setInterval(10000)
 
 class myMain(QtWidgets.QWidget):
 
@@ -761,10 +772,12 @@ class myMain(QtWidgets.QWidget):
                 nextframe(-1)
             if event.key() == Qt.Key_Right:
                 nextframe(1)
+        frametimer.setInterval(20000)
 
     def mousePressEvent(self, event):
         if type(event) == QtGui.QMouseEvent:
             nextframe(1)
+        frametimer.setInterval(20000)
 
 
 class LogHandler(logging.handlers.RotatingFileHandler):
@@ -907,7 +920,7 @@ if __name__ == '__main__':
         frame1.setStyleSheet(
             "#frame1 { background-color: black; border-image: url(" +
             Config.background + ") 0 0 0 0 stretch stretch;}")
-        frame1.setVisible(False)
+        #frame1.setVisible(False)
         frames.append(frame1)
 
         frame2 = QtWidgets.QFrame(w)
@@ -925,7 +938,7 @@ if __name__ == '__main__':
         frame3.setStyleSheet(
             "#frame3 { background-color: blue; border-image: url(" +
             Config.background + ") 0 0 0 0 stretch stretch;}")
-        #frame3.setVisible(False)
+        frame3.setVisible(False)
         frames.append(frame3)
 
         squares1 = QtWidgets.QFrame(frame1)
