@@ -115,150 +115,156 @@ def wxfinished(read_cache=False):
         wxstr = open(wxcache, 'r').read()
     else:
         wxstr = bytes(wxreply.readAll()).decode("utf-8")
-        with open(wxcache, 'w') as f:
-            f.write(wxstr)
 
-    # logging.info(wxstr)
-    wxdata = json.loads(wxstr)
-    f = wxdata['current_observation']
-    iconurl = f['icon_url']
-    icp = ''
-    if (re.search('/nt_', iconurl)):
-        icp = 'n_'
-    wxiconpixmap = QtGui.QPixmap(Config.icons + "/" + icp + f['icon'] + ".png")
-    wxicon.setPixmap(wxiconpixmap.scaled(
-        wxicon.width(), wxicon.height(), Qt.IgnoreAspectRatio,
-        Qt.SmoothTransformation))
-    wxicon2.setPixmap(wxiconpixmap.scaled(
-        wxicon.width(),
-        wxicon.height(),
-        Qt.IgnoreAspectRatio,
-        Qt.SmoothTransformation))
-    wxdesc.setText(f['weather'])
-    wxdesc2.setText(f['weather'])
-
-    if Config.metric:
-        temper.setText(str(f['temp_c']) + u'°C')
-        temper2.setText(str(f['temp_c']) + u'°C')
-        press.setText(Config.LPressure +
-                      f['pressure_mb'] + ' ' + f['pressure_trend'])
-        humidity.setText(Config.LHumidity + f['relative_humidity'])
-        wd = f['wind_dir']
-        if Config.wind_degrees:
-            wd = str(f['wind_degrees']) + u'°'
-        wind.setText(Config.LWind +
-                     wd + ' ' +
-                     str(f['wind_kph']) +
-                     Config.Lgusting +
-                     str(f['wind_gust_kph']))
-        wind2.setText(Config.LFeelslike + str(f['feelslike_c']))
-        wdate.setText("{0:%H:%M}".format(datetime.datetime.fromtimestamp(
-            int(f['local_epoch']))) +
-            Config.LPrecip1hr + f['precip_1hr_metric'] + 'mm ' +
-            Config.LToday + f['precip_today_metric'] + 'mm')
-    else:
-        temper.setText(str(f['temp_f']) + u'°F')
-        temper2.setText(str(f['temp_f']) + u'°F')
-        press.setText(Config.LPressure +
-                      f['pressure_in'] + ' ' + f['pressure_trend'])
-        humidity.setText(Config.LHumidity + f['relative_humidity'])
-        wd = f['wind_dir']
-        if Config.wind_degrees:
-            wd = str(f['wind_degrees']) + u'°'
-        wind.setText(Config.LWind + wd + ' ' +
-                     str(f['wind_mph']) + Config.Lgusting +
-                     str(f['wind_gust_mph']))
-        wind2.setText(Config.LFeelslike + str(f['feelslike_f']))
-        wdate.setText("{0:%H:%M}".format(datetime.datetime.fromtimestamp(
-            int(f['local_epoch']))) +
-            Config.LPrecip1hr + f['precip_1hr_in'] + 'in ' +
-            Config.LToday + f['precip_today_in'] + 'in')
-
-    bottom.setText(Config.LSunRise +
-                   wxdata['sun_phase']['sunrise']['hour'] + ':' +
-                   wxdata['sun_phase']['sunrise']['minute'] +
-                   Config.LSet +
-                   wxdata['sun_phase']['sunset']['hour'] + ':' +
-                   wxdata['sun_phase']['sunset']['minute'] +
-                   Config.LMoonPhase +
-                   wxdata['moon_phase']['phaseofMoon']
-                   )
-
-    for i in range(0, 3):
-        f = wxdata['hourly_forecast'][i * 3 + 2]
-        fl = forecast[i]
+    try:
+        # logging.info(wxstr)
+        wxdata = json.loads(wxstr)
+        f = wxdata['current_observation']
         iconurl = f['icon_url']
         icp = ''
         if (re.search('/nt_', iconurl)):
             icp = 'n_'
-        icon = fl.findChild(QtWidgets.QLabel, "icon")
-        wxiconpixmap = QtGui.QPixmap(
-            Config.icons + "/" + icp + f['icon'] + ".png")
-        icon.setPixmap(wxiconpixmap.scaled(
-            icon.width(),
-            icon.height(),
+        wxiconpixmap = QtGui.QPixmap(Config.icons + "/" + icp + f['icon'] + ".png")
+        wxicon.setPixmap(wxiconpixmap.scaled(
+            wxicon.width(), wxicon.height(), Qt.IgnoreAspectRatio,
+            Qt.SmoothTransformation))
+        wxicon2.setPixmap(wxiconpixmap.scaled(
+            wxicon.width(),
+            wxicon.height(),
             Qt.IgnoreAspectRatio,
             Qt.SmoothTransformation))
-        wx = fl.findChild(QtWidgets.QLabel, "wx")
-        wx.setText(f['condition'])
-        day = fl.findChild(QtWidgets.QLabel, "day")
-        day.setText(f['FCTTIME']['weekday_name'] + ' ' + f['FCTTIME']['civil'])
-        wx2 = fl.findChild(QtWidgets.QLabel, "wx2")
-        s = ''
-        if float(f['pop']) > 0.0:
-            s += f['pop'] + '% '
-        if Config.metric:
-            if float(f['snow']['metric']) > 0.0:
-                s += Config.LSnow + f['snow']['metric'] + 'mm '
-            else:
-                if float(f['qpf']['metric']) > 0.0:
-                    s += Config.LRain + f['qpf']['metric'] + 'mm '
-            s += f['temp']['metric'] + u'°C'
-        else:
-            if float(f['snow']['english']) > 0.0:
-                s += Config.LSnow + f['snow']['english'] + 'in '
-            else:
-                if float(f['qpf']['english']) > 0.0:
-                    s += Config.LRain + f['qpf']['english'] + 'in '
-            s += f['temp']['english'] + u'°F'
+        wxdesc.setText(f['weather'])
+        wxdesc2.setText(f['weather'])
 
-        wx2.setText(s)
-
-    for i in range(3, 9):
-        f = wxdata['forecast']['simpleforecast']['forecastday'][i - 3]
-        fl = forecast[i]
-        icon = fl.findChild(QtWidgets.QLabel, "icon")
-        wxiconpixmap = QtGui.QPixmap(Config.icons + "/" + f['icon'] + ".png")
-        icon.setPixmap(wxiconpixmap.scaled(
-            icon.width(),
-            icon.height(),
-            Qt.IgnoreAspectRatio,
-            Qt.SmoothTransformation))
-        wx = fl.findChild(QtWidgets.QLabel, "wx")
-        wx.setText(f['conditions'])
-        day = fl.findChild(QtWidgets.QLabel, "day")
-        day.setText(f['date']['weekday'])
-        wx2 = fl.findChild(QtWidgets.QLabel, "wx2")
-        s = ''
-        if float(f['pop']) > 0.0:
-            s += str(f['pop']) + '% '
         if Config.metric:
-            if float(f['snow_allday']['cm']) > 0.0:
-                s += Config.LSnow + str(f['snow_allday']['cm']) + 'cm '
-            else:
-                if float(f['qpf_allday']['mm']) > 0.0:
-                    s += Config.LRain + str(f['qpf_allday']['mm']) + 'mm '
-            s += str(f['high']['celsius']) + '/' + \
-                str(f['low']['celsius']) + u'°C'
+            temper.setText(str(f['temp_c']) + u'°C')
+            temper2.setText(str(f['temp_c']) + u'°C')
+            press.setText(Config.LPressure +
+                          f['pressure_mb'] + ' ' + f['pressure_trend'])
+            humidity.setText(Config.LHumidity + f['relative_humidity'])
+            wd = f['wind_dir']
+            if Config.wind_degrees:
+                wd = str(f['wind_degrees']) + u'°'
+            wind.setText(Config.LWind +
+                         wd + ' ' +
+                         str(f['wind_kph']) +
+                         Config.Lgusting +
+                         str(f['wind_gust_kph']))
+            wind2.setText(Config.LFeelslike + str(f['feelslike_c']))
+            wdate.setText("{0:%H:%M}".format(datetime.datetime.fromtimestamp(
+                int(f['local_epoch']))) +
+                Config.LPrecip1hr + f['precip_1hr_metric'] + 'mm ' +
+                Config.LToday + f['precip_today_metric'] + 'mm')
         else:
-            if float(f['snow_allday']['in']) > 0.0:
-                s += Config.LSnow + str(f['snow_allday']['in']) + 'in '
+            temper.setText(str(f['temp_f']) + u'°F')
+            temper2.setText(str(f['temp_f']) + u'°F')
+            press.setText(Config.LPressure +
+                          f['pressure_in'] + ' ' + f['pressure_trend'])
+            humidity.setText(Config.LHumidity + f['relative_humidity'])
+            wd = f['wind_dir']
+            if Config.wind_degrees:
+                wd = str(f['wind_degrees']) + u'°'
+            wind.setText(Config.LWind + wd + ' ' +
+                         str(f['wind_mph']) + Config.Lgusting +
+                         str(f['wind_gust_mph']))
+            wind2.setText(Config.LFeelslike + str(f['feelslike_f']))
+            wdate.setText("{0:%H:%M}".format(datetime.datetime.fromtimestamp(
+                int(f['local_epoch']))) +
+                Config.LPrecip1hr + f['precip_1hr_in'] + 'in ' +
+                Config.LToday + f['precip_today_in'] + 'in')
+
+        bottom.setText(Config.LSunRise +
+                       wxdata['sun_phase']['sunrise']['hour'] + ':' +
+                       wxdata['sun_phase']['sunrise']['minute'] +
+                       Config.LSet +
+                       wxdata['sun_phase']['sunset']['hour'] + ':' +
+                       wxdata['sun_phase']['sunset']['minute'] +
+                       Config.LMoonPhase +
+                       wxdata['moon_phase']['phaseofMoon']
+                       )
+
+        for i in range(0, 3):
+            f = wxdata['hourly_forecast'][i * 3 + 2]
+            fl = forecast[i]
+            iconurl = f['icon_url']
+            icp = ''
+            if (re.search('/nt_', iconurl)):
+                icp = 'n_'
+            icon = fl.findChild(QtWidgets.QLabel, "icon")
+            wxiconpixmap = QtGui.QPixmap(
+                Config.icons + "/" + icp + f['icon'] + ".png")
+            icon.setPixmap(wxiconpixmap.scaled(
+                icon.width(),
+                icon.height(),
+                Qt.IgnoreAspectRatio,
+                Qt.SmoothTransformation))
+            wx = fl.findChild(QtWidgets.QLabel, "wx")
+            wx.setText(f['condition'])
+            day = fl.findChild(QtWidgets.QLabel, "day")
+            day.setText(f['FCTTIME']['weekday_name'] + ' ' + f['FCTTIME']['civil'])
+            wx2 = fl.findChild(QtWidgets.QLabel, "wx2")
+            s = ''
+            if float(f['pop']) > 0.0:
+                s += f['pop'] + '% '
+            if Config.metric:
+                if float(f['snow']['metric']) > 0.0:
+                    s += Config.LSnow + f['snow']['metric'] + 'mm '
+                else:
+                    if float(f['qpf']['metric']) > 0.0:
+                        s += Config.LRain + f['qpf']['metric'] + 'mm '
+                s += f['temp']['metric'] + u'°C'
             else:
-                if float(f['qpf_allday']['in']) > 0.0:
-                    s += Config.LRain + str(f['qpf_allday']['in']) + 'in '
-            s += str(f['high']['fahrenheit']) + '/' + \
-                str(f['low']['fahrenheit']) + u'°F'
-        wx2.setText(s)
+                if float(f['snow']['english']) > 0.0:
+                    s += Config.LSnow + f['snow']['english'] + 'in '
+                else:
+                    if float(f['qpf']['english']) > 0.0:
+                        s += Config.LRain + f['qpf']['english'] + 'in '
+                s += f['temp']['english'] + u'°F'
+
+            wx2.setText(s)
+
+        for i in range(3, 9):
+            f = wxdata['forecast']['simpleforecast']['forecastday'][i - 3]
+            fl = forecast[i]
+            icon = fl.findChild(QtWidgets.QLabel, "icon")
+            wxiconpixmap = QtGui.QPixmap(Config.icons + "/" + f['icon'] + ".png")
+            icon.setPixmap(wxiconpixmap.scaled(
+                icon.width(),
+                icon.height(),
+                Qt.IgnoreAspectRatio,
+                Qt.SmoothTransformation))
+            wx = fl.findChild(QtWidgets.QLabel, "wx")
+            wx.setText(f['conditions'])
+            day = fl.findChild(QtWidgets.QLabel, "day")
+            day.setText(f['date']['weekday'])
+            wx2 = fl.findChild(QtWidgets.QLabel, "wx2")
+            s = ''
+            if float(f['pop']) > 0.0:
+                s += str(f['pop']) + '% '
+            if Config.metric:
+                if float(f['snow_allday']['cm']) > 0.0:
+                    s += Config.LSnow + str(f['snow_allday']['cm']) + 'cm '
+                else:
+                    if float(f['qpf_allday']['mm']) > 0.0:
+                        s += Config.LRain + str(f['qpf_allday']['mm']) + 'mm '
+                s += str(f['high']['celsius']) + '/' + \
+                    str(f['low']['celsius']) + u'°C'
+            else:
+                if float(f['snow_allday']['in']) > 0.0:
+                    s += Config.LSnow + str(f['snow_allday']['in']) + 'in '
+                else:
+                    if float(f['qpf_allday']['in']) > 0.0:
+                        s += Config.LRain + str(f['qpf_allday']['in']) + 'in '
+                s += str(f['high']['fahrenheit']) + '/' + \
+                    str(f['low']['fahrenheit']) + u'°F'
+            wx2.setText(s)
+    except Exception:
+        return #quit out losses and go back, don't crash
+
+    # If everything ran fine from URL reply, write out to new cache
+    if not read_cache:
+        with open(wxcache, 'w') as f:
+            f.write(wxstr)
 
 
 def getwx():

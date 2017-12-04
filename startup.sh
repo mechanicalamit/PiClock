@@ -114,4 +114,9 @@ fi
 # the main app
 cd Clock
 echo "Starting PiClock.... logging to screen and PyQtPiCLock.log."
-python3 -u PyQtPiClock.py
+while true;do
+	$(python -u PyQtPiClock.py)
+	echo "PyQtPiCLock crashed with exit code $?. Restarting .."
+	rm -f .cache/* # clean out stale files 
+	sleep 10
+done
